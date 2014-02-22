@@ -24,10 +24,10 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.Log;
 
-import io.vov.vitamio.utils.FileUtils;
-
 import java.io.FileDescriptor;
 import java.io.IOException;
+
+import io.vov.vitamio.utils.FileUtils;
 
 /**
  * MediaMetadataRetriever is used to get meta data from any media file
@@ -40,142 +40,142 @@ import java.io.IOException;
  * </pre>
  */
 public class MediaMetadataRetriever {
-  private Context mContext;
-  private AssetFileDescriptor mFD = null;
+    private Context mContext;
+    private AssetFileDescriptor mFD = null;
 
-  public MediaMetadataRetriever(Context ctx) {
-    mContext = ctx;
-    native_init();
-  }
-
-  private static native boolean loadFFmpeg_native(String ffmpegPath);
-
-  public void setDataSource(Context context, Uri uri) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
-    if (context == null || uri == null)
-      throw new IllegalArgumentException();
-    String scheme = uri.getScheme();
-    if (scheme == null || scheme.equals("file")) {
-      setDataSource(FileUtils.getPath(uri.toString()));
-      return;
+    public MediaMetadataRetriever(Context ctx) {
+        mContext = ctx;
+        native_init();
     }
 
-    try {
-      ContentResolver resolver = context.getContentResolver();
-      mFD = resolver.openAssetFileDescriptor(uri, "r");
-      if (mFD == null)
+    private static native boolean loadFFmpeg_native(String ffmpegPath);
+
+    public void setDataSource(Context context, Uri uri) throws IOException, IllegalArgumentException, SecurityException, IllegalStateException {
+        if (context == null || uri == null)
+            throw new IllegalArgumentException();
+        String scheme = uri.getScheme();
+        if (scheme == null || scheme.equals("file")) {
+            setDataSource(FileUtils.getPath(uri.toString()));
+            return;
+        }
+
+        try {
+            ContentResolver resolver = context.getContentResolver();
+            mFD = resolver.openAssetFileDescriptor(uri, "r");
+            if (mFD == null)
+                return;
+            setDataSource(mFD.getParcelFileDescriptor().getFileDescriptor());
+            return;
+        } catch (Exception e) {
+            closeFD();
+        }
+        Log.e("Couldn't open file on client side, trying server side %s", uri.toString());
+        setDataSource(uri.toString());
         return;
-      setDataSource(mFD.getParcelFileDescriptor().getFileDescriptor());
-      return;
-    } catch (Exception e) {
-      closeFD();
     }
-    Log.e("Couldn't open file on client side, trying server side %s", uri.toString());
-    setDataSource(uri.toString());
-    return;
-  }
 
-  public native void setDataSource(String path) throws IOException, IllegalArgumentException, IllegalStateException;
+    public native void setDataSource(String path) throws IOException, IllegalArgumentException, IllegalStateException;
 
-  public native void setDataSource(FileDescriptor fd) throws IOException, IllegalArgumentException, IllegalStateException;
-  
-  /**
-   * Call this method after setDataSource(). This method retrieves the 
-   * meta data value associated with the keyCode.
-   * 
-   * The keyCode currently supported is listed below as METADATA_XXX
-   * constants. With any other value, it returns a null pointer.
-   * 
-   * @param keyCode One of the constants listed below at the end of the class.
-   * @return The meta data value associate with the given keyCode on success; 
-   * null on failure.
-   */
-  public native String extractMetadata(String keyCode) throws IllegalStateException;
+    public native void setDataSource(FileDescriptor fd) throws IOException, IllegalArgumentException, IllegalStateException;
 
-  public native Bitmap getFrameAtTime(long timeUs) throws IllegalStateException;
+    /**
+     * Call this method after setDataSource(). This method retrieves the
+     * meta data value associated with the keyCode.
+     * <p/>
+     * The keyCode currently supported is listed below as METADATA_XXX
+     * constants. With any other value, it returns a null pointer.
+     *
+     * @param keyCode One of the constants listed below at the end of the class.
+     * @return The meta data value associate with the given keyCode on success;
+     * null on failure.
+     */
+    public native String extractMetadata(String keyCode) throws IllegalStateException;
 
-  private native void _release();
+    public native Bitmap getFrameAtTime(long timeUs) throws IllegalStateException;
 
-  public void release() {
-    _release();
-    closeFD();
-  }
+    private native void _release();
 
-  static {
-    String LIB_ROOT = Vitamio.getLibraryPath();
-    Log.i("LIB ROOT: %s", LIB_ROOT);
-    System.load(LIB_ROOT + "libstlport_shared.so");
-    System.load(LIB_ROOT + "libvscanner.so");
-    loadFFmpeg_native(LIB_ROOT + "libffmpeg.so");
-  }
-
-  private native final void native_init();
-
-  private native final void native_finalize();
-
-  @Override
-  protected void finalize() throws Throwable {
-    try {
-      native_finalize();
-    } finally {
-      super.finalize();
+    public void release() {
+        _release();
+        closeFD();
     }
-  }
 
-  private void closeFD() {
-    if (mFD != null) {
-      try {
-        mFD.close();
-      } catch (IOException e) {
-      }
-      mFD = null;
+    static {
+        String LIB_ROOT = Vitamio.getLibraryPath();
+        Log.i("LIB ROOT: %s", LIB_ROOT);
+        System.load(LIB_ROOT + "libstlport_shared.so");
+        System.load(LIB_ROOT + "libvscanner.so");
+        loadFFmpeg_native(LIB_ROOT + "libffmpeg.so");
     }
-  }
+
+    private native final void native_init();
+
+    private native final void native_finalize();
+
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            native_finalize();
+        } finally {
+            super.finalize();
+        }
+    }
+
+    private void closeFD() {
+        if (mFD != null) {
+            try {
+                mFD.close();
+            } catch (IOException e) {
+            }
+            mFD = null;
+        }
+    }
   
   /*
    * Do not change these metadata key values without updating their
    * counterparts in c file
    */
-  
-  /**
-   * The metadata key to retrieve the information about the album title
-   * of the data source.
-   */
-  public static final String METADATA_KEY_ALBUM           = "album";
-  /**
-   * The metadata key to retrieve the information about the artist of
-   * the data source.
-   */
-  public static final String METADATA_KEY_ARTIST          = "artist";
-  /**
-   * The metadata key to retrieve the information about the author of
-   * the data source.
-   */
-  public static final String METADATA_KEY_AUTHOR          = "author";
-  /**
-   * The metadata key to retrieve the information about the composer of
-   * the data source.
-   */
-  public static final String METADATA_KEY_COMPOSER        = "composer";
-  /**
-   * The metadata key to retrieve the content type or genre of the data
-   * source.
-   */
-  public static final String METADATA_KEY_GENRE           = "genre";
-  /**
-   * The metadata key to retrieve the data source title.
-   */
-  public static final String METADATA_KEY_TITLE           = "title";
-  /**
-   * The metadata key to retrieve the playback duration of the data source.
-   */
-  public static final String METADATA_KEY_DURATION        = "duration";
-  /**
-   * If the media contains video, this key retrieves its width.
-   */
-  public static final String METADATA_KEY_VIDEO_WIDTH     = "width";
-  /**
-   * If the media contains video, this key retrieves its height.
-   */
-  public static final String METADATA_KEY_VIDEO_HEIGHT    = "height";
-  
+
+    /**
+     * The metadata key to retrieve the information about the album title
+     * of the data source.
+     */
+    public static final String METADATA_KEY_ALBUM = "album";
+    /**
+     * The metadata key to retrieve the information about the artist of
+     * the data source.
+     */
+    public static final String METADATA_KEY_ARTIST = "artist";
+    /**
+     * The metadata key to retrieve the information about the author of
+     * the data source.
+     */
+    public static final String METADATA_KEY_AUTHOR = "author";
+    /**
+     * The metadata key to retrieve the information about the composer of
+     * the data source.
+     */
+    public static final String METADATA_KEY_COMPOSER = "composer";
+    /**
+     * The metadata key to retrieve the content type or genre of the data
+     * source.
+     */
+    public static final String METADATA_KEY_GENRE = "genre";
+    /**
+     * The metadata key to retrieve the data source title.
+     */
+    public static final String METADATA_KEY_TITLE = "title";
+    /**
+     * The metadata key to retrieve the playback duration of the data source.
+     */
+    public static final String METADATA_KEY_DURATION = "duration";
+    /**
+     * If the media contains video, this key retrieves its width.
+     */
+    public static final String METADATA_KEY_VIDEO_WIDTH = "width";
+    /**
+     * If the media contains video, this key retrieves its height.
+     */
+    public static final String METADATA_KEY_VIDEO_HEIGHT = "height";
+
 }
